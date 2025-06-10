@@ -27,6 +27,10 @@ This makes it an ideal pre-processing step for:
 - Mobile/embedded use cases with tight performance constraints
 - Games or simulations requiring real-time movement decisions
 
+- **In addition**, if **no valid path exists** between the start and target (due to complete obstruction), this will be detected **during bounding box construction** – as seen in the code – and **pathfinding can be aborted immediately.**
+This avoids unnecessary computation and provides an efficient early-out condition for your search logic.
+- This also makes a separate **flood-fill reachability check redundant**, since **setGibisBox already confirms or denies path connectivity** during its bounding process.
+
 ## How It Works
 
 1. The algorithm initializes a straight-line bounding box between the start and target positions.
