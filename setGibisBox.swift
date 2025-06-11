@@ -87,7 +87,7 @@ struct GridPos {
             // Side length of the square map (used for bounds checking)
             let cacheCount = cache.count
             
-            outer: for startOutlineDir in [1, 3] { // Try both clockwise and counter-clockwise
+            for startOutlineDir in [1, 3] { // Try both clockwise and counter-clockwise
                 currentRow = startRow
                 currentCol = startCol
                 
@@ -112,7 +112,7 @@ struct GridPos {
                     }
                     
                     // If reached the target position, continue
-                    if currentCol == endCol && currentRow == endRow { continue outer  }
+                    if currentCol == endCol && currentRow == endRow { break  }
                     
                     // Save current position as start for outline tracing
                     let startX = currentCol, startY = currentRow
