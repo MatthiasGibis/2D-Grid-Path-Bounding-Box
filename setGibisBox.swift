@@ -180,7 +180,7 @@ struct GridPos {
                             boundingBoxMaxRow = max(boundingBoxMaxRow, currentRow)
                             boundingBoxMinRow = min(boundingBoxMinRow, currentRow)
                             
-                            if currentRow == self.row {
+                            if currentRow == startRow {
                                 if stepX == 1 ? (currentCol > startX && currentCol <= endCol) : (currentCol < startX && currentCol >= endCol) {
                                     // found a path around obstacle to target
                                     break
