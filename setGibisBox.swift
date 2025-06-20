@@ -118,15 +118,6 @@ struct GridPos {
                     let startX = currentCol, startY = currentRow
                     
                     // Helper to check if we've reached the other side (aligned with target)
-                    var reachedOtherSide: Bool {
-                        if currentRow == startRow {
-                            // Moving horizontally: check if currentCol is between startX and targetCol
-                            stepX == 1 ? (currentCol > startX && currentCol <= endCol) : (currentCol < startX && currentCol >= endCol)
-                        } else if currentCol == endCol {
-                            // Moving vertically: check if currentRow is between startY and targetRow
-                            stepY == 1 ? (currentRow > startY && currentRow <= endRow) : (currentRow < startY && currentRow >= endRow)
-                        } else { false }
-                    }
                     
                     // Initialize direction for outline following:
                     // 0=up,1=right,2=down,3=left
@@ -139,75 +130,69 @@ struct GridPos {
                     let xMaxLimitBefore = boundingBoxMaxCol
                     let yMinLimitBefore = boundingBoxMinRow
                     let yMaxLimitBefore = boundingBoxMaxRow
-                    
+
                     // Begin outline following loop to find a path around obstacles
                     while true {
-                        dir = (dir + outlineDir) & 3 // rotate direction clockwise or counterclockwise
+                        visitedCount += 1
                         currentCol += dxs[dir]
                         currentRow += dys[dir]
-                        
-                        if !fastCacheAccess {
-                            // If new position not walkable, backtrack and adjust direction
+
+                        // Check for out-of-bounds and handle accordingly
+                        if currentCol < 0 || currentRow < 0 || currentCol >= cacheCount || currentRow >= cacheCount {
+                            if outlineDir == 4 - startOutlineDir {
+                                // Already tried both directions and went out of map a second time,
+                                // so the start or target tile cannot be reached
+                                shouldEndSearch = true
+                                return
+                            }
+                            dir = (startDirValue + 2) & 3 // turn 180 degrees
+                            
+                            startDirValue = 4
+                            
+                            outlineDir = 4 - startOutlineDir // change clockwise direction
+                            
+                            currentCol = startX // reset position to start of outline trace
+                            currentRow = startY //
+                            
+                            boundingBoxMinCol = xMinLimitBefore
+                            boundingBoxMaxCol = xMaxLimitBefore
+                            boundingBoxMinRow = yMinLimitBefore
+                            boundingBoxMaxRow = yMaxLimitBefore
+                        } else if !fastCacheAccess {
+                            // blocked?, turn direction counterclockwise and continue
                             currentCol -= dxs[dir]
                             currentRow -= dys[dir]
+                            dir = (dir - outlineDir) & 3
+                        } else {
+                            dir = (dir + outlineDir) & 3 // rotate direction clockwise or counterclockwise
+                            currentCol += dxs[dir]
+                            currentRow += dys[dir]
                             
-                            dir = (dir - outlineDir) & 3 // rotate direction back
-                            
-                            currentCol += dxs[dir] // move straight ahead
-                            currentRow += dys[dir] //
-                            
-                            // Check for out-of-bounds and handle accordingly
-                            if currentCol < 0 || currentRow < 0 || currentCol >= mapWidth || currentRow >= mapHeight {
-                                if outlineDir == 4 - startOutlineDir {
-                                    // Already tried both directions and went out of map a second time,
-                                    // so the start or target tile cannot be reached
-                                    shouldEndSearch = true
-                                    return
-                                }
-                                outlineDir = 4 - startOutlineDir // change clockwise direction
-                                
-                                currentCol = startX // reset position to start of outline trace
-                                currentRow = startY //
-                                
-                                dir = (startDirValue + 2) & 3 // turn 180 degrees
-                                startDirValue = dir
-                                
-                                boundingBoxMinCol = xMinLimitBefore
-                                boundingBoxMaxCol = xMaxLimitBefore
-                                boundingBoxMinRow = yMinLimitBefore
-                                boundingBoxMaxRow = yMaxLimitBefore
-                                
-                                continue // Skip the rest of the loop to avoid further checks this iteration
-                            } else if !fastCacheAccess {
-                                // Still blocked, turn direction counterclockwise and continue
+                            if !fastCacheAccess {
                                 currentCol -= dxs[dir]
                                 currentRow -= dys[dir]
-                                dir = (dir - outlineDir) & 3 // -90°
-                            } else {
-                                // Found valid tile, update bounding box
-                                boundingBoxMaxCol = max(boundingBoxMaxCol, currentCol)
-                                boundingBoxMinCol = min(boundingBoxMinCol, currentCol)
-                                boundingBoxMaxRow = max(boundingBoxMaxRow, currentRow)
-                                boundingBoxMinRow = min(boundingBoxMinRow, currentRow)
-                                
-                                if reachedOtherSide {
-                                    // found a path around obstacle to target
-                                    break
-                                }
+                                dir = (dir - outlineDir) & 3
                             }
-                        } else {
-                            // Found valid tile, update bounding box
+
+                             // Found valid tile, update bounding box
                             boundingBoxMaxCol = max(boundingBoxMaxCol, currentCol)
                             boundingBoxMinCol = min(boundingBoxMinCol, currentCol)
                             boundingBoxMaxRow = max(boundingBoxMaxRow, currentRow)
                             boundingBoxMinRow = min(boundingBoxMinRow, currentRow)
-
-                            if reachedOtherSide {
-                                 // found a path around obstacle to target
-                                 break
+                            
+                            if currentRow == self.row {
+                                if stepX == 1 ? (currentCol > startX && currentCol <= endCol) : (currentCol < startX && currentCol >= endCol) {
+                                    // found a path around obstacle to target
+                                    break
+                                }
+                            } else if currentCol == endCol {
+                                if stepY == 1 ? (currentRow > startY && currentRow <= endRow) : (currentRow < startY && currentRow >= endRow) {
+                                    // found a path around obstacle to target
+                                    break
+                                }
                             }
                         }
-                      
+
                         // If returned to the start position and direction, we've looped in a circle,
                         // meaning the start or target is trapped with no path available
                         if currentCol == startX, currentRow == startY, dir == startDirValue {
